@@ -2,16 +2,15 @@ from flask import Flask, request, jsonify
 import pandas as pd
 import re
 import string
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.svm import SVC
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 app = Flask(__name__)
 
-# Charger votre modèle entraîné (ou recréez-le si nécessaire)
-vectorizer = CountVectorizer()  # Utilisez le même vectorizer que pour l'entraînement
-model = MultinomialNB()  # Utilisez le même modèle
+vectorizer = TfidfVectorizer()
+model = SVC(kernel='linear')
 
-# Fonction de nettoyage de texte
+# clean le commentaire
 def clean_text(text):
     text = text.lower()
     text = text.translate(str.maketrans('', '', string.punctuation))
@@ -19,24 +18,24 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# Endpoint pour tester si un commentaire est un discours de haine
+# endpoint pour tester si un commentaire est un discours de haine
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.json
-    comments = data.get('phrases', [])  # S'assurer que l'on attend 'phrases' comme clé
+    comment = data.get('comment', '')
     
-    # Nettoyage et vectorisation des commentaires
-    cleaned_comments = [clean_text(comment) for comment in comments]
+    # celan et vectorisation des commentaires
+    cleaned_comments = [clean_text(comment)]
     X = vectorizer.transform(cleaned_comments)
     
-    # Prédictions
-    predictions = model.predict(X)
+    # prediction
+    prediction = model.predict(X)
     
-    # Formater les résultats pour l'extension
-    results = [{'result': 'Hate Speech' if pred == 1 else 'Non Hate Speech'} for pred in predictions]
+    # formatage du résultat
+    result = 'Hate Speech' if prediction[0] == 1 else 'Non Hate Speech'
     
-    # Retourner le résultat en JSON
-    return jsonify(results)
+    # return au format json
+    return jsonify({'result': result})
 
 if __name__ == '__main__':
-    app.run(port=5000)
+    app.run(port=5000) # attention port 5000
